@@ -10,6 +10,7 @@ Provides admin controls via aiogram 3.x:
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -39,6 +40,14 @@ _bot: Bot | None = None
 _config: dict[str, Any] = {}
 _http_session: "aiohttp.ClientSession | None" = None
 _account_sessions: dict[str, "AccountSession"] = {}
+
+
+def _get_admin_id() -> str:
+    """Get admin chat ID from env or config."""
+    return os.getenv(
+        "ADMIN_CHAT_ID",
+        str(_config.get("admin_chat_id", "")),
+    )
 
 
 def set_shared_refs(
@@ -87,8 +96,8 @@ def _save_config() -> None:
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
     """Handle /start command."""
-    admin_id = _config.get("admin_chat_id", "")
-    if str(message.chat.id) != str(admin_id):
+    admin_id = _get_admin_id()
+    if not admin_id or str(message.chat.id) != str(admin_id):
         await message.answer("⛔ Нет доступа.")
         return
 
@@ -105,8 +114,8 @@ async def cmd_start(message: Message) -> None:
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     """Handle /help command."""
-    admin_id = _config.get("admin_chat_id", "")
-    if str(message.chat.id) != str(admin_id):
+    admin_id = _get_admin_id()
+    if not admin_id or str(message.chat.id) != str(admin_id):
         return
 
     await message.answer(
@@ -130,8 +139,8 @@ async def cmd_help(message: Message) -> None:
 @router.message(Command("stats"))
 async def cmd_stats(message: Message) -> None:
     """Show per-account and total statistics."""
-    admin_id = _config.get("admin_chat_id", "")
-    if str(message.chat.id) != str(admin_id):
+    admin_id = _get_admin_id()
+    if not admin_id or str(message.chat.id) != str(admin_id):
         return
 
     accounts = _config.get("accounts", {})
@@ -173,8 +182,8 @@ async def cmd_stats(message: Message) -> None:
 @router.message(F.document)
 async def handle_cookie_upload(message: Message) -> None:
     """Process uploaded cookie .json files."""
-    admin_id = _config.get("admin_chat_id", "")
-    if str(message.chat.id) != str(admin_id):
+    admin_id = _get_admin_id()
+    if not admin_id or str(message.chat.id) != str(admin_id):
         return
 
     doc = message.document
