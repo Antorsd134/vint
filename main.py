@@ -90,6 +90,7 @@ async def monitor_account(
     vision_url = config.get(
         "vision_api_url", "http://localhost:3000"
     )
+    vision_token = config.get("vision_api_token", "")
     inbox_url = config.get(
         "vinted_inbox_url", "https://www.vinted.de/inbox"
     )
@@ -117,6 +118,7 @@ async def monitor_account(
                     proxy,
                     cookie_file,
                     vision_url,
+                    vision_api_token=vision_token,
                 )
                 account_sessions[account_id] = acc
 
@@ -267,7 +269,8 @@ async def monitor_account(
             if acc is not None:
                 try:
                     await disconnect_account(
-                        http_session, acc, vision_url
+                        http_session, acc, vision_url,
+                        vision_api_token=vision_token,
                     )
                 except Exception:
                     pass
@@ -397,13 +400,17 @@ async def main() -> None:
             vision_url = config.get(
                 "vision_api_url", "http://localhost:3000"
             )
+            vision_token = config.get(
+                "vision_api_token", ""
+            )
             for acc_id, task in monitoring_tasks.items():
                 task.cancel()
             for acc in account_sessions.values():
                 try:
                     from browser_core import disconnect_account
                     await disconnect_account(
-                        http_session, acc, vision_url
+                        http_session, acc, vision_url,
+                        vision_api_token=vision_token,
                     )
                 except Exception:
                     pass

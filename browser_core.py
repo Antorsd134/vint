@@ -91,11 +91,22 @@ def load_proxies(
 # ── Vision API helpers ───────────────────────────────────────
 
 
+def _vision_headers(token: str) -> dict[str, str]:
+    """Build headers for Vision API requests."""
+    headers: dict[str, str] = {
+        "Content-Type": "application/json",
+    }
+    if token:
+        headers["X-Token"] = token
+    return headers
+
+
 async def create_vision_profile(
     session: aiohttp.ClientSession,
     vision_api_url: str,
     proxy_line: str,
     profile_name: str = "",
+    token: str = "",
 ) -> str:
     """Create a new Vision browser profile with proxy.
 
@@ -119,7 +130,10 @@ async def create_vision_profile(
         "browser": "chrome",
     }
 
-    async with session.post(create_url, json=payload) as resp:
+    headers = _vision_headers(token)
+    async with session.post(
+        create_url, json=payload, headers=headers,
+    ) as resp:
         if resp.status not in (200, 201):
             body = await resp.text()
             raise RuntimeError(
@@ -148,6 +162,7 @@ async def start_vision_profile(
     session: aiohttp.ClientSession,
     vision_api_url: str,
     profile_id: str,
+    token: str = "",
 ) -> str:
     """Start a Vision profile and return the WS debugger URL."""
     start_url = (
@@ -155,7 +170,8 @@ async def start_vision_profile(
         f"/api/v1/profile/start/{profile_id}"
     )
 
-    async with session.get(start_url) as resp:
+    headers = _vision_headers(token)
+    async with session.get(start_url, headers=headers) as resp:
         if resp.status != 200:
             body = await resp.text()
             raise RuntimeError(
@@ -190,6 +206,7 @@ async def stop_vision_profile(
     session: aiohttp.ClientSession,
     vision_api_url: str,
     profile_id: str,
+    token: str = "",
 ) -> None:
     """Stop a running Vision browser profile."""
     stop_url = (
@@ -197,7 +214,8 @@ async def stop_vision_profile(
         f"/api/v1/profile/stop/{profile_id}"
     )
     try:
-        async with session.get(stop_url) as resp:
+        headers = _vision_headers(token)
+        async with session.get(stop_url, headers=headers) as resp:
             logger.info(
                 "Stopped Vision profile %s (status %d)",
                 profile_id,
@@ -655,6 +673,7 @@ async def connect_account(
     proxy_line: str,
     cookie_file: str,
     vision_api_url: str,
+    vision_api_token: str = "",
 ) -> AccountSession:
     """Set up a full browser session for one Vinted account.
 
@@ -677,12 +696,14 @@ async def connect_account(
         vision_api_url,
         proxy_line,
         profile_name=f"vinted_{account_id}",
+        token=vision_api_token,
     )
     acc.vision_profile_id = profile_id
 
     # Start profile and get WS URL
     ws_url = await start_vision_profile(
-        session, vision_api_url, profile_id
+        session, vision_api_url, profile_id,
+        token=vision_api_token,
     )
 
     # Connect Playwright
@@ -719,6 +740,7 @@ async def disconnect_account(
     session: aiohttp.ClientSession,
     acc: AccountSession,
     vision_api_url: str,
+    vision_api_token: str = "",
 ) -> None:
     """Close browser and stop Vision profile."""
     try:
@@ -733,7 +755,8 @@ async def disconnect_account(
 
     if acc.vision_profile_id:
         await stop_vision_profile(
-            session, vision_api_url, acc.vision_profile_id
+            session, vision_api_url, acc.vision_profile_id,
+            token=vision_api_token,
         )
 
     logger.info("Account %s disconnected", acc.account_id)

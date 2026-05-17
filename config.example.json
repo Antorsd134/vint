@@ -1,5 +1,6 @@
 {
   "vision_api_url": "http://localhost:3000",
+  "vision_api_token": "ВСТАВЬ_СЮДА_СВОЙ_X-TOKEN",
   "vinted_inbox_url": "https://www.vinted.de/inbox",
   "check_interval_min": 45,
   "check_interval_max": 90,
